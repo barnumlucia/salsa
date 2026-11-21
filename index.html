@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bamboléo — Célia Cruz y Fania All Stars</title>
+  <style>
+    /* ------------------------------------------------------------------
+       Fonts used in the original artwork
+         title      Bickham Script
+         subtitle   Avenir Next Condensed
+         paragraph  Quiverleaf CF
+       Bickham Script and Quiverleaf CF are commercial fonts, so they are
+       picked up from the computer (if installed) or from the optional
+       files in the "fonts" folder next to this page.
+       ------------------------------------------------------------------ */
+    @font-face {
+      font-family: "Bickham Script";
+      src: local("Bickham Script Pro 3"), local("BickhamScriptPro3-Regular"),
+           local("Bickham Script Pro"), local("BickhamScriptPro-Regular"),
+           local("Bickham Script"),
+           url("fonts/BickhamScript.woff2") format("woff2"),
+           url("fonts/BickhamScript.otf") format("opentype"),
+           url("fonts/BickhamScript.ttf") format("truetype");
+    }
+    @font-face {
+      font-family: "Quiverleaf";
+      src: local("Quiverleaf CF Light"), local("QuiverleafCF-Light"),
+           local("QuiverLeaf CF Light"),
+           local("Quiverleaf CF"), local("QuiverleafCF-Regular"),
+           local("QuiverLeaf CF"), local("Quiverleaf CF Regular"),
+           url("fonts/QuiverleafCF-Light.woff2") format("woff2"),
+           url("fonts/QuiverleafCF-Light.otf") format("opentype"),
+           url("fonts/QuiverleafCF-Light.ttf") format("truetype"),
+           url("fonts/QuiverleafCF.woff2") format("woff2"),
+           url("fonts/QuiverleafCF.otf") format("opentype"),
+           url("fonts/QuiverleafCF.ttf") format("truetype");
+    }
+
+    html, body {
+      margin: 0;
+      background: #040707; /* background color of the original artwork */
+    }
+
+    /* Scrolling still works, but the scroll bar is never shown. */
+    html { scrollbar-width: none; -ms-overflow-style: none; }
+    html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+    /* The artwork stays pinned to the window while the page scrolls beneath
+       it. Scrolling is what controls the sound (see the script). */
+    .pin {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: #040707;   /* needed so the video's "lighten" blend has the page color to blend with */
+    }
+    .spacer { height: 300vh; }   /* length of the scroll: 0 = silent, bottom = full volume */
+
+    /* The original artwork is 1600x1000 (16:10). The stage scales that
+       layout to fit the window; everything inside is positioned relative
+       to it so the composition never changes. */
+    .stage {
+      position: relative;
+      width: min(100vw, 160vh);
+      aspect-ratio: 1600 / 1000;
+      color: #efece8;
+    }
+
+    /* ---------- Text (retyped) ---------- */
+    .text {
+      position: absolute;
+      margin: 0;
+      white-space: nowrap;
+      visibility: hidden;          /* shown once fitted, avoids a flash */
+      font-kerning: normal;
+      -webkit-font-smoothing: antialiased;
+    }
+    .ready .text { visibility: visible; }
+
+    .baseline {                      /* zero-size marker sitting on the baseline */
+      display: inline-block;
+      width: 0;
+      height: 0;
+    }
+
+    .title {
+      left: 48.84%;                  /* centered on the artwork's title */
+      transform: translateX(-50%);
+      font-family: "Bickham Script", "Bickham Script Pro 3", "Bickham Script Pro",
+                   "Snell Roundhand", "Apple Chancery", cursive;
+      font-weight: 400;
+      line-height: 1;
+    }
+
+    .subtitle {
+      left: 48.84%;
+      transform: translateX(-50%);
+      font-family: "Avenir Next Condensed", "Avenir Next", "Arial Narrow", sans-serif;
+      font-weight: 700;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .paragraph {
+      left: 40.06%;                  /* same left edge / width as title + subtitle */
+      white-space: normal;           /* wraps inside the max width */
+      text-align: justify;
+      text-align-last: left;         /* last line is left aligned; the lines above are justified */
+      font-family: "Quiverleaf", "Quiverleaf CF", "QuiverLeaf CF", "Avenir Next", "Lato", sans-serif;
+      font-weight: 300;              /* light */
+      -webkit-text-stroke: 0.015em currentColor;  /* nudges the weight up just a hair */
+    }
+    .paragraph .line { display: inline; }
+    .paragraph .cta {
+      font-weight: 400;              /* slightly bolder than the light paragraph text */
+      -webkit-text-stroke: 0.02em currentColor;
+      white-space: nowrap;           /* never split the phrase across lines */
+    }
+    /* "for music." and "to mute." sit in the same spot and cross-fade. */
+    .cta .swap { display: inline-grid; justify-items: start; }
+    .cta .swap > span { grid-area: 1 / 1; transition: opacity 700ms ease; }
+    .cta .swap .b { opacity: 0; }
+    .cta.at-bottom .swap .a { opacity: 0; }
+    .cta.at-bottom .swap .b { opacity: 1; }
+
+
+    /* ---------- Mobile / small screens: single column, text not shrunk ---------- */
+    .mobile .stage {
+      width: 100%;
+      aspect-ratio: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 40px;
+      box-sizing: border-box;
+    }
+    .mobile .text {
+      position: relative;
+      left: auto;
+      top: auto;
+      transform: none;
+    }
+    .mobile .title    { margin-top: -28px; }
+    .mobile .subtitle { margin-top: 4px; }
+    .mobile .paragraph {
+      margin-top: 16px;
+      max-width: 100%;
+    }
+    .mobile .video {
+      position: relative;
+      left: auto;
+      top: auto;
+      transform: none;
+      height: auto;
+      width: min(100%, 520px);   /* script shrinks it further only if the screen is too short */
+    }
+
+    /* ---------- Video ---------- */
+    /* The video is square (2000x2000) with a black background, so it's
+       blended with "lighten" to melt into the page color. It's centered
+       where the paper picture was in the artwork. */
+    .video {
+      position: absolute;
+      left: 48.7%;
+      top: 40.5%;
+      height: 52%;
+      aspect-ratio: 1 / 1;
+      transform: translate(-50%, -50%);
+      object-fit: cover;
+      mix-blend-mode: lighten;
+      background: transparent;
+    }
+  </style>
+</head>
+<body>
+  <div class="pin">
+  <div class="stage" id="stage">
+    <video
+      id="dance"
+      class="video"
+      src="SALSA%20DANCING!.mp4"
+      autoplay
+      loop
+      muted
+      playsinline
+      preload="auto"
+      aria-label="Two lovers dancing salsa, hand drawn on construction paper"
+    ></video>
+
+    <h1 class="text title" id="title" style="font-size:inherit"><span class="word">bamboléo</span><span class="baseline"></span></h1>
+
+    <div class="text subtitle" id="subtitle"><span class="word">Célia Cruz y Fania All Stars</span><span class="baseline"></span></div>
+
+    <div class="text paragraph" id="paragraph">
+      <span class="line"><span class="baseline"></span><span class="word">A love letter to a song of my childhood. Two lovers dancing</span></span>
+      <span class="line"><span class="word">salsa, hand drawn on scraps of construction paper. Scans and</span></span>
+      <span class="line"><span class="word">animation by me. Edited in Photoshop and Premiere Pro.</span></span>
+      <span class="cta" id="cta">Scroll <span class="swap"><span class="a">for music.</span><span class="b" aria-hidden="true">to mute.</span></span></span>
+    </div>
+  </div>
+  </div>
+  <div class="spacer" aria-hidden="true"></div>
+
+  <script>
+    /* ===================================================================
+       Text layout
+       The measurements below come straight from the original 1600x1000
+       artwork. The script scales the real fonts so each piece of text
+       lands on exactly the same width and baseline as in the artwork,
+       at any window size.
+       =================================================================== */
+    const ART_W = 1600, ART_H = 1000;
+    const stage = document.getElementById('stage');
+
+    const spec = {
+      // ink width and baseline (artwork pixels)
+      title:     { width: 281, baseline: 718 },
+      subtitle:  { width: 281, baseline: 745, capHeight: 10.5, capRatio: 0.708 },
+      // The paragraph's max width matches the title/subtitle (281). Its text
+      // is sized 20% larger than the artwork (first line would be 343 wide on
+      // one line), so it wraps onto more lines inside that max width.
+      paragraph: { width: 281, sizeRefWidth: 343, baseline: 777, lineHeight: 1.29, maxLines: 4 }  // lineHeight = ratio of font-size
+    };
+
+    // Natural width of an element's text at a given font-size.
+    const naturalWidth = (word, size, letterSpacing = 0) => {
+      word.parentElement.style.fontSize = size + 'px';
+      word.parentElement.style.letterSpacing = letterSpacing + 'px';
+      return word.getBoundingClientRect().width;
+    };
+
+    // Put the element's baseline at the given artwork y-coordinate.
+    function placeBaseline(el, probe, artY, k) {
+      if (isMobile) { el.style.top = ''; return; }   // mobile: normal flow, no absolute placement
+      el.style.top = '0px';
+      const stageTop = stage.getBoundingClientRect().top;
+      const b0 = probe.getBoundingClientRect().bottom - stageTop;
+      el.style.top = (artY * k - b0) + 'px';
+    }
+
+    /* Small screens (phones, small windows): the full-page composition would
+       have to shrink everything, so instead the text keeps its full size and
+       the page switches to a single centered column (video on top, then the
+       text), scrolling vertically if it ever needs to. */
+    const MOBILE_BELOW = 960;   // composition narrower than this => column layout
+    const MOBILE_SCALE = 1;     // text size on mobile (1 = full artwork size)
+    let isMobile = false;
+
+    function layout() {
+      const vw = document.documentElement.clientWidth;
+      const vh = window.innerHeight;
+      isMobile = Math.min(vw, vh * ART_W / ART_H) < MOBILE_BELOW;
+      document.documentElement.classList.toggle('mobile', isMobile);
+
+      // artwork px -> screen px
+      const k = isMobile ? MOBILE_SCALE : stage.clientWidth / ART_W;
+
+      /* title: scale the script font until the word is the right width */
+      {
+        const el = document.getElementById('title');
+        const word = el.querySelector('.word');
+        const w100 = naturalWidth(word, 100);
+        el.style.fontSize = (100 * spec.title.width * k / w100) + 'px';
+        placeBaseline(el, el.querySelector('.baseline'), spec.title.baseline, k);
+      }
+
+      /* subtitle: fixed cap height, letter-spacing stretches it to width */
+      {
+        const el = document.getElementById('subtitle');
+        const word = el.querySelector('.word');
+        const size = spec.subtitle.capHeight / spec.subtitle.capRatio * k;
+        const natural = naturalWidth(word, size, 0);
+        const gaps = word.textContent.length - 1;
+        const ls = (spec.subtitle.width * k - natural) / gaps;
+        el.style.fontSize = size + 'px';
+        el.style.letterSpacing = ls + 'px';
+        el.style.paddingLeft = ls + 'px';       // balances the trailing space
+        placeBaseline(el, el.querySelector('.baseline'), spec.subtitle.baseline, k);
+      }
+
+      /* paragraph: font-size comes from the 20%-larger reference size (the
+         widest original line would be sizeRefWidth wide); the block itself is
+         capped at the title/subtitle width, so the text wraps inside it. */
+      {
+        const el = document.getElementById('paragraph');
+        const words = [...el.querySelectorAll('.word')];
+        el.style.width = (spec.paragraph.width * k) + 'px';
+        el.style.fontSize = '100px';
+        const widest = Math.max(...words.map(w => {
+          const line = w.parentElement;
+          line.style.display = 'inline-block';  // measure natural one-line width
+          line.style.whiteSpace = 'nowrap';
+          const width = w.getBoundingClientRect().width;
+          line.style.display = '';
+          line.style.whiteSpace = '';
+          return width;
+        }));
+        // Start at the preferred size and shrink in tiny steps until ALL the
+        // text (including "Scroll for music.") fits in the allowed number of lines.
+        const refSize = 100 * spec.paragraph.sizeRefWidth * k / widest;
+        const ratio = spec.paragraph.lineHeight;
+        let size = refSize;
+        el.style.textAlignLast = 'left';
+        for (; size > refSize * 0.5; size -= refSize * 0.005) {
+          el.style.fontSize = size + 'px';
+          el.style.lineHeight = (size * ratio) + 'px';
+          const lines = Math.round(el.getBoundingClientRect().height / (size * ratio));
+          if (lines <= spec.paragraph.maxLines) break;
+        }
+        placeBaseline(el, el.querySelector('.baseline'), spec.paragraph.baseline, k);
+      }
+
+      /* mobile: the artwork is pinned to the window, so if the screen is short
+         the VIDEO gets smaller (never the text) so everything stays in view */
+      const video = document.getElementById('dance');
+      if (isMobile) {
+        const h = id => document.getElementById(id).offsetHeight;
+        const used = 24 + 40 + h('title') + h('subtitle') + h('paragraph') + (-28 + 4 + 16);
+        const side = Math.max(160, Math.min(520, document.documentElement.clientWidth - 32, window.innerHeight - used));
+        video.style.width = side + 'px';
+      } else {
+        video.style.width = '';
+      }
+
+      document.body.classList.add('ready');
+    }
+
+    // body.ready toggles visibility via the .ready .text rule
+    document.documentElement.classList.add('pending');
+    const showReady = () => { layout(); document.documentElement.classList.add('ready'); };
+    (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(showReady);
+    window.addEventListener('resize', layout);
+
+    /* ===================================================================
+       Video sound: silent at the top, louder the farther the page is scrolled
+       =================================================================== */
+    const video = document.getElementById('dance');
+
+    // Always start silent (required for autoplay anyway).
+    video.muted = true;
+    video.volume = 0;
+    video.play().catch(() => {});
+
+    /* ---- Scroll controls the sound ---------------------------------------
+       The page is scrolled by 0..100%. Volume follows that position: silent at
+       the top, louder the farther you scroll, full volume at the very bottom.
+       At the bottom the end of the text cross-fades from "for music." to
+       "to mute." (scrolling back up lowers the volume again).
+
+       Browsers only allow audible video after a real gesture (click, tap or
+       key press); scrolling with a wheel or trackpad is not one. Until then
+       the video keeps playing silently, and the volume follows the scroll
+       the moment the visitor clicks / taps / presses a key (arrow keys, space
+       and page up/down count). If a browser pauses the video, it is resumed. */
+    const cta = document.getElementById('cta');
+    let target = 0;          // volume implied by the scroll position (0..1)
+    let current = 0;         // smoothed volume actually applied
+    let rafId = null;
+    let unlocked = false;    // a real gesture has happened
+    let audioBlocked = false;
+
+    const hasGesture = () =>
+      unlocked || (navigator.userActivation ? navigator.userActivation.hasBeenActive : true);
+
+    function applyVolume() {
+      const v = hasGesture() && !audioBlocked ? current : 0;
+      if (v > 0.001) {
+        if (video.muted) video.muted = false;
+        video.volume = Math.min(1, v);
+      } else {
+        video.volume = 0;
+        if (!video.muted) video.muted = true;
+      }
+    }
+
+    // Ease toward the target so the volume glides instead of stepping.
+    function tick() {
+      current += (target - current) * 0.18;
+      if (Math.abs(target - current) < 0.002) current = target;
+      applyVolume();
+      rafId = current !== target ? requestAnimationFrame(tick) : null;
+    }
+
+    function onScroll() {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const y = window.scrollY;
+      target = max > 0 ? Math.min(1, Math.max(0, y / max)) : 0;
+      cta.classList.toggle('at-bottom', max > 0 && y >= max - 4);
+      if (!rafId) rafId = requestAnimationFrame(tick);
+    }
+
+    // Keep the video playing no matter what.
+    function keepPlaying() {
+      if (video.ended) return;
+      video.play().catch(() => {
+        // Audible playback was refused: stay silent and keep going.
+        audioBlocked = true;
+        video.muted = true;
+        video.volume = 0;
+        video.play().catch(() => {});
+      });
+    }
+    video.addEventListener('pause', () => { if (!document.hidden) keepPlaying(); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && video.paused) keepPlaying(); });
+
+    // The first real gesture unlocks sound; apply the current scroll volume.
+    ['pointerdown', 'keydown', 'touchend', 'click'].forEach(type =>
+      window.addEventListener(type, () => {
+        unlocked = true;
+        audioBlocked = false;
+        applyVolume();
+      }, { capture: true, passive: true })
+    );
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    onScroll();
+  </script>
+</body>
+</html>
