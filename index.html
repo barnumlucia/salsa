@@ -165,7 +165,7 @@
       muted
       playsinline
       preload="auto"
-      aria-label="Two lovers dancing salsa, hand drawn on construction paper"
+      aria-label="Two people dancing salsa, hand drawn on construction paper"
     ></video>
 
     <h1 class="text title" id="title" style="font-size:inherit"><span class="word">bamboléo</span><span class="baseline"></span></h1>
@@ -173,7 +173,7 @@
     <div class="text subtitle" id="subtitle"><span class="word">Célia Cruz y Fania All Stars</span><span class="baseline"></span></div>
 
     <div class="text paragraph" id="paragraph">
-      <span class="line"><span class="baseline"></span><span class="word">A love letter to a song of my childhood. Two lovers dancing</span></span>
+      <span class="line"><span class="baseline"></span><span class="word">A love letter to a song of my childhood. Two friends dancing</span></span>
       <span class="line"><span class="word">salsa, hand drawn on scraps of construction paper. Scans and</span></span>
       <span class="line"><span class="word">animation by me. Edited in Photoshop and Premiere Pro.</span></span>
       <span class="cta" id="cta"><span class="swap"><span class="a">Click and scroll for music.</span><span class="b" aria-hidden="true">Scroll to mute.</span></span></span>
@@ -190,9 +190,7 @@
       // ink width and baseline (artwork pixels)
       title:     { width: 281, baseline: 718 },
       subtitle:  { width: 281, baseline: 745, capHeight: 10.5, capRatio: 0.708 },
-      // The paragraph's max width matches the title/subtitle (281). Its text
-      // is sized 20% larger than the artwork (first line would be 343 wide on
-      // one line), so it wraps onto more lines inside that max width.
+  
       paragraph: { width: 281, sizeRefWidth: 343, baseline: 777, lineHeight: 1.29, maxLines: 4 }  // lineHeight = ratio of font-size
     };
 
@@ -242,7 +240,7 @@
         const ls = (spec.subtitle.width * k - natural) / gaps;
         el.style.fontSize = size + 'px';
         el.style.letterSpacing = ls + 'px';
-        el.style.paddingLeft = ls + 'px';       // balances the trailing space
+        el.style.paddingLeft = ls + 'px';       
         placeBaseline(el, el.querySelector('.baseline'), spec.subtitle.baseline, k);
       }
 
@@ -260,8 +258,7 @@
           line.style.whiteSpace = '';
           return width;
         }));
-        // Start at the preferred size and shrink in tiny steps until ALL the
-        // text (including "Scroll for music.") fits in the allowed number of lines.
+        
         const refSize = 100 * spec.paragraph.sizeRefWidth * k / widest;
         const ratio = spec.paragraph.lineHeight;
         let size = refSize;
@@ -296,7 +293,6 @@
 
     const video = document.getElementById('dance');
 
-    // Always start silent (required for autoplay anyway).
     video.muted = true;
     video.volume = 0;
     video.play().catch(() => {});
@@ -305,7 +301,7 @@
     let target = 0;          // volume implied by the scroll position (0..1)
     let current = 0;         // smoothed volume actually applied
     let rafId = null;
-    let unlocked = false;    // a real gesture has happened
+    let unlocked = false;    
     let audioBlocked = false;
 
     const hasGesture = () =>
@@ -322,7 +318,7 @@
       }
     }
 
-    // Ease toward the target so the volume glides instead of stepping.
+    
     function tick() {
       current += (target - current) * 0.18;
       if (Math.abs(target - current) < 0.002) current = target;
@@ -338,7 +334,7 @@
       if (!rafId) rafId = requestAnimationFrame(tick);
     }
 
-    // Keep the video playing no matter what.
+ 
     function keepPlaying() {
       if (video.ended) return;
       video.play().catch(() => {
@@ -352,7 +348,7 @@
     video.addEventListener('pause', () => { if (!document.hidden) keepPlaying(); });
     document.addEventListener('visibilitychange', () => { if (!document.hidden && video.paused) keepPlaying(); });
 
-    // The first real gesture unlocks sound; apply the current scroll volume.
+  
     ['pointerdown', 'keydown', 'touchend', 'click'].forEach(type =>
       window.addEventListener(type, () => {
         unlocked = true;
